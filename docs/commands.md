@@ -527,11 +527,12 @@ The registry is identical across transports — same tools, same schemas, same
 The network transports need `mcp >= 1.10.0` — streamable HTTP landed in 1.8.0
 and rebinding protection in 1.10.0 — which is the floor `soup-cli[mcp]` pins.
 
-The server exposes 14 read-only tools — `advise`, `data_inspect`,
+In a default stdio or HTTP session, `tools/list` advertises 18 tools, of which 14 are callable with the default flags — `advise`, `data_inspect`,
 `data_validate`, `data_score`, `data_doctor`, `recipes_search`, `recipes_show`,
 `runs_list`, `runs_show`, `registry_list`, `registry_show`, `profile`,
-`diagnose_evidence`, `ship_evidence` — each returning JSON. Two **plan-only**
-mutating tools (`train_start`, `export`) are gated behind `--allow-mutating`
+`diagnose_evidence`, `ship_evidence` — each returning JSON. The four mutating tools remain discoverable through `tools/list` but are disabled at call time unless enabled:
+
+Two **plan-only** mutating tools (`train_start`, `export`) are gated behind `--allow-mutating`
 (`"args": ["mcp", "serve", "--allow-mutating"]`); when `--allow-mutating` alone is active, they only render the exact command that would run — they never execute training or export.
 
 `--allow-execute` implies `--allow-mutating` and enables full background subprocess execution via two execution tools (`train_execute` and `export_execute`). Execution requires a server-issued one-time confirmation token returned during the planning phase (`train_start` or `export`). The token state is kept in-memory with a 5-minute TTL and is consumed before subprocess invocation.
