@@ -441,24 +441,29 @@ def _read_asr_rows(path: Path) -> list[dict]:
     rows: list[dict] = []
     dropped = 0
     capped = False
-    with open(path, encoding="utf-8") as f:
-        for raw_line in f:
-            line = raw_line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                dropped += 1
-                continue
-            audio = obj.get("audio") if isinstance(obj, dict) else None
-            if not isinstance(audio, str) or not audio.strip():
-                dropped += 1
-                continue
-            rows.append(obj)
-            if len(rows) >= _MAX_ASR_ROWS:
-                capped = True
-                break
+    try:
+        with open(path, encoding="utf-8") as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    dropped += 1
+                    continue
+                audio = obj.get("audio") if isinstance(obj, dict) else None
+                if not isinstance(audio, str) or not audio.strip():
+                    dropped += 1
+                    continue
+                rows.append(obj)
+                if len(rows) >= _MAX_ASR_ROWS:
+                    capped = True
+                    break
+    except UnicodeDecodeError as exc:
+        raise ValueError(
+            f"Cannot read {path.name} as UTF-8. Save the ASR manifest as UTF-8 and retry."
+        ) from exc
     if dropped:
         console.print(
             f"[yellow]Skipped {dropped} row(s) with no 'audio' path.[/]"
@@ -647,7 +652,11 @@ def _infer_asr(
     else:
         base_dir = Path(input_file).resolve().parent
 
-    rows = _read_asr_rows(Path(input_file))
+    try:
+        rows = _read_asr_rows(Path(input_file))
+    except ValueError as exc:
+        console.print(terminal_text(exc, "red"))
+        raise typer.Exit(1) from exc
     if not rows:
         console.print("[red]No ASR rows found (need {\"audio\": path} JSONL).[/]")
         raise typer.Exit(1)
